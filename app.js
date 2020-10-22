@@ -7,6 +7,26 @@ var helmet = require('helmet');
 var session = require('express-session');
 var passport = require('passport');
 
+
+// モデルの読み込み
+var User = require('./models/user');
+var Schedule = require('./models/schedules');
+var Availability = require('./models/availability');
+var Candidate = require('./models/candidate');
+var Comment = require('./models/comment');
+
+User.sync().then(() => {    // sync関数：モデルに合わせてデータベースのテーブルを作成する関数. テーブルの作成が終わった後に行う処理を無名関数で記述
+  Schedule.belongsTo(User, {foreignKey: 'creatdeBy'})    // schedule が user の従属エンティティと記述. schedule の createdBy を user の外部キー 
+  Schedule.sync();    
+  Comment.belongsTo(User, {foreignKey: 'userId'});    // Comment の userId は user の 外部キーとして、テーブルを作成
+  Comment.sync();
+  Availability.belongsTo(User, {foreignKey: 'userId'});    // Availability の userId は　user の外部キーとしてテーブルを設定
+  Candidate.sync().then(() => {    // 候補日のデータテーブルを作成
+    Availability.belongsTo(Candidate, {foreignKey: 'candidateId'});    // availability の candidateId を candidate の外部キーとして設定
+    Availability.sync();
+  });
+});
+
 var GitHubStrategy = require('passport-github2').Strategy;
 var GITHUB_CLIENT_ID = '2f831cb3d4aac02393aa';
 var GITHUB_CLIENT_SECRET = '9fbc340ac0175123695d2dedfbdf5a78df3b8067';
@@ -27,7 +47,12 @@ passport.use(new GitHubStrategy({
 },
   function (accessToken, refreshToken, profile, done) {
     process.nextTick(function () {
-      return done(null, profile);
+      User.upsert({    // upsert：update と insert の造語. 渡されたデータがすでにテーブルにあれば更新 / なければ挿入
+        userId: profile.id,    // userId に 取得したID
+        username: profile.username   // userId に取得した名前
+      }).then(() => {
+        done(null, profile);
+      });
     });
   }
 ));
