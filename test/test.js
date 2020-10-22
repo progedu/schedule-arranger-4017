@@ -4,37 +4,36 @@ const app = require('../app');
 const passportStub = require('passport-stub');
 
 describe('/login', () => {
-  before(() => {
+  beforeAll(() => {
     passportStub.install(app);
     passportStub.login({ username: 'testuser' });
   });
 
-  after(() => {
+  afterAll(() => {
     passportStub.logout();
     passportStub.uninstall(app);
   });
-
-  it('ログインのためのリンクが含まれる', (done) => {
-    request(app)
+  test('ログインのためのリンクが含まれる', () => {
+    return request(app)
       .get('/login')
       .expect('Content-Type', 'text/html; charset=utf-8')
       .expect(/<a href="\/auth\/github"/)
-      .expect(200, done);
+      .expect(200);
   });
-
-  it('ログイン時はユーザー名が表示される', (done) => {
-    request(app)
+  
+  test('ログイン時はユーザー名が表示される', () => {
+    return request(app)
       .get('/login')
       .expect(/testuser/)
-      .expect(200, done);
+      .expect(200);
   });
 });
 
 describe('/logout', () => {
-  it('/ にリダイレクトされる', (done) => {
-    request(app)
+  test('/ にリダイレクトされる', () => {
+    return request(app)
       .get('/logout')
       .expect('Location', '/')
-      .expect(302, done);
+      .expect(302);
   });
 });
